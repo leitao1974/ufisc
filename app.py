@@ -41,12 +41,20 @@ st.info("IA configurada para o regime jurídico atualizado (Simplex 2024 e Contr
 # Seleção de Regimes conforme o Diagrama
 st.subheader("Enquadramentos Jurídicos")
 c1, c2, c3 = st.columns(3)
+
 with c1:
     check_ren = st.checkbox("REN (DL 166/2008 + DL 123/2024)")
+    # CAIXA DE TEXTO DINÂMICA PARA REN
+    tipologia_ren = ""
+    if check_ren:
+        tipologia_ren = st.text_input("Indique a Tipologia REN (ex: Arribas, Cabeceiras, Infiltração Máxima):")
+        
     check_ran = st.checkbox("RAN (DL 73/2009 + DL 199/2015)")
+
 with c2:
     check_natura = st.checkbox("Rede Natura 2000 (DL 140/99)")
     check_patrimonio = st.checkbox("Património (Lei 107/2001)")
+
 with c3:
     check_rjue = st.checkbox("Ordenamento/Urbanismo (RJUE + DL 10/2024)")
     check_coimas = st.checkbox("Coimas (Lei 50/2006 + DL 87/2024)")
@@ -54,6 +62,8 @@ with c3:
 if st.button("🚀 Gerar Parecer Jurídico"):
     if not api_key or not uploaded_file:
         st.error("⚠️ Falta a API Key ou o ficheiro PDF.")
+    elif check_ren and not tipologia_ren:
+        st.warning("⚠️ Por favor, indique a tipologia da REN para uma análise precisa.")
     else:
         with st.spinner(f"A analisar com {model_choice}..."):
             try:
@@ -64,7 +74,10 @@ if st.button("🚀 Gerar Parecer Jurídico"):
 
                 # Construção das Instruções Legais Dinâmicas
                 diretrizes = []
-                if check_ren: diretrizes.append("- REN: DL 166/2008 atualizado pelo DL 123/2024. Citar Anexo II e Art. 20º.")
+                if check_ren: 
+                    diretrizes.append(f"- REN: DL 166/2008 atualizado pelo DL 123/2024. O utilizador indicou a TIPOLOGIA: '{tipologia_ren}'. "
+                                      "Cruzar obrigatoriamente com o ANEXO II (Usos e ações compatíveis) e fundamentar com o Art. 20º.")
+                
                 if check_ran: diretrizes.append("- RAN: DL 73/2009 e DL 199/2015. Transcrever alíneas do Art. 21º ou 22º.")
                 if check_rjue: diretrizes.append("- Urbanismo: RJUE (DL 555/99) e Simplex Urbanístico (DL 10/2024). Focar na Nulidade do Art. 68º se faltarem pareceres.")
                 if check_natura: diretrizes.append("- Rede Natura 2000: DL 140/99 (versão atualizada). Aplicar o teste de exceção do Art. 9º.")
@@ -76,10 +89,11 @@ if st.button("🚀 Gerar Parecer Jurídico"):
                 {chr(10).join(diretrizes)}
 
                 REGRAS CRÍTICAS DE ANÁLISE:
-                1. NULIDADES (Art. 68.º RJUE): Identifica se a operação é nula por falta de pareceres vinculativos (ex: ICNF) em áreas protegidas.
+                1. NULIDADES (Art. 68.º RJUE): Identifica se a operação é nula por falta de pareceres vinculativos (ex: ICNF, APA, CCDR) em áreas protegidas ou REN.
                 2. VIABILIDADE DE LEGALIZAÇÃO:
-                   - Equaciona se a pretensão tem parâmetros urbanísticos para legalização.
-                   - Analisa especificamente a viabilidade face ao Artigo 9.º do DL 140/99: A ação afeta a integridade do sítio? Há razões imperiosas de interesse público maior? Há ausência de alternativa?
+                   - Equaciona se a pretensão tem parâmetros urbanísticos para legalização (Art. 102º RJUE).
+                   - Analisa especificamente a viabilidade face ao Artigo 9.º do DL 140/99 (se em Rede Natura) e Artigo 20.º e 21.º do RJREN (DL 166/2008).
+                   - Verificar se a ação é compatível com a proteção ecológica e prevenção de riscos da tipologia REN indicada.
                 3. ENQUADRAMENTO: Se a ação NÃO se enquadra num regime, faz apenas um pequeno parágrafo justificativo. Se se ENQUADRA, fundamenta exaustivamente.
                 4. ESTILO: Jurídico formal, capítulos a **BOLD**.
 
@@ -90,7 +104,7 @@ if st.button("🚀 Gerar Parecer Jurídico"):
                 1. **OBJECTIVO**
                 2. **DESCRIÇÃO TÉCNICA E AUDITORIA**
                 3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES**
-                4. **ANÁLISE JURÍDICA DE VIABILIDADE DE LEGALIZAÇÃO** (Incluir análise do Art. 9º DL 140/99 e Art. 102º RJUE)
+                4. **ANÁLISE JURÍDICA DE VIABILIDADE DE LEGALIZAÇÃO** (Cruzar critérios cumulativos e compatibilidade com a tipologia REN)
                 5. **QUADRO SANCIONATÓRIO E NULIDADES**
                 6. **PARECER FINAL E MEDIDAS DE REPOSIÇÃO**
                 """
