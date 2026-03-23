@@ -3,7 +3,7 @@ import google.generativeai as genai
 from pypdf import PdfReader
 
 # Configuração da Página
-st.set_page_config(page_title="Fiscalização Digital v2", layout="wide")
+st.set_page_config(page_title="Fiscalização Digital v2", layout="wide", page_icon="⚖️")
 
 def extrair_texto_pdf(pdf_file):
     reader = PdfReader(pdf_file)
@@ -12,78 +12,78 @@ def extrair_texto_pdf(pdf_file):
         texto += page.extract_text()
     return texto
 
-## --- SIDEBAR ---
+## --- SIDEBAR: CONFIGURAÇÕES DINÂMICAS ---
 with st.sidebar:
-    st.title("⚙️ Painel de Controlo")
-    api_key = st.text_input("Google API Key:", type="password")
+    st.title("⚙️ Configurações")
+    api_key = st.text_input("Introduza a sua Google API Key:", type="password")
     
-    # Seletor Dinâmico de Modelos
-    model_choice = st.selectbox(
-        "Escolha o Modelo:",
-        ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"]
-    )
-    
-    st.info("O modelo 'Pro' é melhor para análise jurídica complexa.")
+    if api_key:
+        try:
+            genai.configure(api_key=api_key)
+            # Lista modelos disponíveis para esta chave específica
+            available_models = [m.name.replace('models/', '') for m in genai.list_models() 
+                                if 'generateContent' in m.supported_generation_methods]
+            model_choice = st.selectbox("Selecione o Modelo Disponível:", available_models)
+        except Exception as e:
+            st.error(f"Erro ao validar chave: {e}")
+            model_choice = "gemini-1.5-pro" # Fallback
+    else:
+        st.warning("Insira a API Key para listar os modelos.")
+        model_choice = "gemini-1.5-pro"
+
     st.divider()
     uploaded_file = st.file_uploader("Upload do Auto de Notícia (PDF)", type="pdf")
 
 ## --- CORPO DA APP ---
-st.header("⚖️ Gerador de Pareceres de Fiscalização")
-st.subheader("Selecione os enquadramentos aplicáveis:")
+st.header("⚖️ Sistema de Apoio à Fiscalização")
+st.info("A IA consultará a legislação mais recente (2024) conforme o seu fluxo de trabalho.")
 
-col1, col2 = st.columns(2)
-with col1:
-    check_ren = st.checkbox("REN - Reserva Ecológica Nacional")
-    check_ran = st.checkbox("RAN - Reserva Agrícola Nacional")
-    check_rjue = st.checkbox("RJUE / RJIGT (Urbanismo)")
-with col2:
-    check_natura = st.checkbox("Rede Natura 2000 / Áreas Protegidas")
-    check_coimas = st.checkbox("Cálculo de Coimas (Lei 50/2006)")
-    check_patrimonio = st.checkbox("Património Cultural (Lei 107/2001)")
+# Seleção de Regimes conforme o Diagrama
+st.subheader("Enquadramentos Jurídicos")
+c1, c2, c3 = st.columns(3)
+with c1:
+    check_ren = st.checkbox("REN (DL 166/2008 + DL 123/2024)")
+    check_ran = st.checkbox("RAN (DL 73/2009 + DL 199/2015)")
+with c2:
+    check_natura = st.checkbox("Rede Natura 2000")
+    check_patrimonio = st.checkbox("Património (Lei 107/2001)")
+with c3:
+    check_rjue = st.checkbox("Ordenamento/Urbanismo (RJUE)")
+    check_coimas = st.checkbox("Coimas (Lei 50/2006 + DL 87/2024)")
 
-if st.button("🚀 Gerar Análise Jurídica"):
+if st.button("🚀 Gerar Parecer Jurídico"):
     if not api_key or not uploaded_file:
-        st.error("Erro: Verifique a API Key e o ficheiro PDF.")
+        st.error("⚠️ Falta a API Key ou o ficheiro PDF.")
     else:
-        with st.spinner(f"A consultar legislação com {model_choice}..."):
+        with st.spinner(f"A analisar com {model_choice}..."):
             try:
-                # 1. Extração de texto
                 texto_auto = extrair_texto_pdf(uploaded_file)
                 
-                # 2. Configuração da IA com Chave Dinâmica
-                genai.configure(api_key=api_key)
-                
-                # Inicialização do modelo selecionado
-                model = genai.GenerativeModel(model_name=model_choice)
+                # Configuração do Modelo selecionado dinamicamente
+                model = genai.GenerativeModel(model_name=f"models/{model_choice}")
 
-                # 3. Construção do Prompt com as instruções de legislação do fluxo
-                contexto_legal = ""
-                if check_ren:
-                    contexto_legal += "- REN: DL 166/2008 + DL 123/2024. Analisar Anexo II e Art. 20º.\n"
-                if check_ran:
-                    contexto_legal += "- RAN: DL 73/2009 + DL 199/2015. Arts. 21º e 22º.\n"
-                if check_rjue:
-                    contexto_legal += "- Urbanismo: RJUE + DL 10/2024 (Simplex).\n"
-                if check_coimas:
-                    contexto_legal += "- Coimas: Lei 50/2006 + DL 87/2024.\n"
+                # Construção das Instruções Legais Dinâmicas
+                diretrizes = []
+                if check_ren: diretrizes.append("REN: DL 166/2008, DL 124/2019 e a atualização do DL 123/2024. Citar Anexo II e Art. 20º.")
+                if check_ran: diretrizes.append("RAN: DL 73/2009 e DL 199/2015. Transcrever alíneas do Art. 21º ou 22º.")
+                if check_rjue: diretrizes.append("Urbanismo: RJUE (DL 555/99) e o novo Simplex Urbanístico (DL 10/2024).")
+                if check_coimas: diretrizes.append("Contraordenações: Lei 50/2006 com as alterações do DL 87/2024.")
 
                 prompt_final = f"""
-                Age como um Jurista Especialista em Ambiente e Ordenamento em Portugal.
-                Analisa o seguinte AUTO DE NOTÍCIA e gera um parecer técnico seguindo a estrutura abaixo.
-                
-                IMPORTANTE:
-                - Consulta a legislação mais recente de 2024 mencionada nas diretrizes.
-                - Se a ação NÃO se enquadra num regime, escreve apenas um parágrafo curto.
-                - Se se ENQUADRA, fundamenta com artigos e alíneas.
-                - Estilo: Jurídico formal (PT-PT), capítulos a **BOLD**.
+                Age como um Jurista Sénior em Portugal (PT-PT).
+                Analisa o texto do AUTO DE NOTÍCIA e gera um parecer com base na seguinte legislação:
+                {chr(10).join(diretrizes)}
+
+                REGRAS DE OURO:
+                1. Se a ação NÃO se enquadra num regime selecionado, faz apenas um pequeno parágrafo enquadrador.
+                2. Se se ENQUADRA, faz o enquadramento legal completo e fundamentado.
+                3. Conclui explicitamente se a ação é "Legalizável" ou "Insuscetível de Legalização".
+                4. Estilo Jurídico Formal. Títulos a **BOLD**.
 
                 TEXTO DO AUTO:
                 {texto_auto}
 
-                DIRETRIZES LEGAIS:
-                {contexto_legal}
-                
-                ESTRUTURA OBRIGATÓRIA:
+                ESTRUTURA DO DOCUMENTO:
                 1. **OBJECTIVO**
                 2. **DESCRIÇÃO TÉCNICA E AUDITORIA**
                 3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES**
@@ -95,11 +95,11 @@ if st.button("🚀 Gerar Análise Jurídica"):
                 response = model.generate_content(prompt_final)
                 
                 st.markdown("---")
-                st.markdown("### 📄 Parecer Jurídico Gerado")
+                st.subheader("📄 Parecer Gerado")
                 st.markdown(response.text)
                 
-                st.download_button("Baixar Parecer", response.text, file_name="parecer_final.txt")
+                st.download_button("Descarregar Parecer", response.text, file_name="parecer_juridico.md")
 
             except Exception as e:
-                st.error(f"Erro na IA: {str(e)}")
-                st.info("Dica: Verifique se a sua API Key tem permissões para o modelo selecionado.")
+                st.error(f"Erro na geração: {e}")
+                st.info("Tente mudar o modelo na barra lateral (ex: para gemini-1.5-flash).")
