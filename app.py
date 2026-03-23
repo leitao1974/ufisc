@@ -16,8 +16,14 @@ def extrair_texto_pdf(pdf_file):
 with st.sidebar:
     st.title("⚙️ Painel de Controlo")
     api_key = st.text_input("Google API Key:", type="password")
-    st.info("A IA consultará as versões mais recentes do DR (ex: DL 123/2024).")
     
+    # Seletor Dinâmico de Modelos
+    model_choice = st.selectbox(
+        "Escolha o Modelo:",
+        ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"]
+    )
+    
+    st.info("O modelo 'Pro' é melhor para análise jurídica complexa.")
     st.divider()
     uploaded_file = st.file_uploader("Upload do Auto de Notícia (PDF)", type="pdf")
 
@@ -39,54 +45,61 @@ if st.button("🚀 Gerar Análise Jurídica"):
     if not api_key or not uploaded_file:
         st.error("Erro: Verifique a API Key e o ficheiro PDF.")
     else:
-        with st.spinner("A processar legislação e a redigir..."):
-            texto_auto = extrair_texto_pdf(uploaded_file)
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-pro')
-
-            # Construção da base de conhecimento do Prompt
-            contexto_legal = ""
-            if check_ren:
-                contexto_legal += "- REN: Analisar sob o DL 166/2008, com a redação atualíssima do DL 123/2024. Verificar Tipologias do Anexo II e critérios de exceção do Art. 20º.\n"
-            if check_ran:
-                contexto_legal += "- RAN: Analisar sob o DL 73/2009 (redação DL 199/2015). Focar nos Arts. 21º e 22º (utilizações não agrícolas).\n"
-            if check_rjue:
-                contexto_legal += "- Urbanismo: Considerar o novo 'Simplex Urbanístico' (DL 10/2024) que alterou o RJUE.\n"
-            if check_coimas:
-                contexto_legal += "- Coimas: Aplicar a Lei 50/2006 (Lei Quadro das Contraordenações Ambientais) com a redação do DL 87/2024.\n"
-
-            prompt_final = f"""
-            ESTRUTURA DE PARECER TÉCNICO-JURÍDICO (PT-PT)
-            
-            És um jurista sénior da administração pública. Com base no texto do AUTO DE NOTÍCIA abaixo, gera um parecer.
-            
-            REGRAS CRÍTICAS:
-            1. Se a ação descrita NÃO se enquadra num regime selecionado, escreve apenas um parágrafo curto justificando a exclusão.
-            2. Se se ENQUADRA, faz uma análise exaustiva com citações de artigos.
-            3. Estilo: Formal, técnico, capítulos a **BOLD**.
-            4. Se houver dúvidas sobre a legalização, aplica os critérios cumulativos (ex: interesse público, inexistência de alternativa).
-
-            CONTEÚDO DO AUTO:
-            {texto_auto}
-
-            DIRETRIZES DE ATUALIZAÇÃO LEGISLATIVA:
-            {contexto_legal}
-            
-            ESTRUTURA DO OUTPUT:
-            1. **OBJECTIVO**
-            2. **DESCRIÇÃO TÉCNICA E AUDITORIA** (Cruzamento com Portarias 419/2012 ou 162/2011 se aplicável)
-            3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES**
-            4. **ANÁLISE JURÍDICA DE VIABILIDADE DE LEGALIZAÇÃO** (Concluir taxativamente)
-            5. **QUADRO SANCIONATÓRIO E NULIDADES**
-            6. **PARECER FINAL E MEDIDAS DE REPOSIÇÃO**
-            """
-
+        with st.spinner(f"A consultar legislação com {model_choice}..."):
             try:
+                # 1. Extração de texto
+                texto_auto = extrair_texto_pdf(uploaded_file)
+                
+                # 2. Configuração da IA com Chave Dinâmica
+                genai.configure(api_key=api_key)
+                
+                # Inicialização do modelo selecionado
+                model = genai.GenerativeModel(model_name=model_choice)
+
+                # 3. Construção do Prompt com as instruções de legislação do fluxo
+                contexto_legal = ""
+                if check_ren:
+                    contexto_legal += "- REN: DL 166/2008 + DL 123/2024. Analisar Anexo II e Art. 20º.\n"
+                if check_ran:
+                    contexto_legal += "- RAN: DL 73/2009 + DL 199/2015. Arts. 21º e 22º.\n"
+                if check_rjue:
+                    contexto_legal += "- Urbanismo: RJUE + DL 10/2024 (Simplex).\n"
+                if check_coimas:
+                    contexto_legal += "- Coimas: Lei 50/2006 + DL 87/2024.\n"
+
+                prompt_final = f"""
+                Age como um Jurista Especialista em Ambiente e Ordenamento em Portugal.
+                Analisa o seguinte AUTO DE NOTÍCIA e gera um parecer técnico seguindo a estrutura abaixo.
+                
+                IMPORTANTE:
+                - Consulta a legislação mais recente de 2024 mencionada nas diretrizes.
+                - Se a ação NÃO se enquadra num regime, escreve apenas um parágrafo curto.
+                - Se se ENQUADRA, fundamenta com artigos e alíneas.
+                - Estilo: Jurídico formal (PT-PT), capítulos a **BOLD**.
+
+                TEXTO DO AUTO:
+                {texto_auto}
+
+                DIRETRIZES LEGAIS:
+                {contexto_legal}
+                
+                ESTRUTURA OBRIGATÓRIA:
+                1. **OBJECTIVO**
+                2. **DESCRIÇÃO TÉCNICA E AUDITORIA**
+                3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES**
+                4. **ANÁLISE JURÍDICA DE VIABILIDADE DE LEGALIZAÇÃO**
+                5. **QUADRO SANCIONATÓRIO E NULIDADES**
+                6. **PARECER FINAL E MEDIDAS DE REPOSIÇÃO**
+                """
+
                 response = model.generate_content(prompt_final)
-                st.markdown("### 📄 Parecer Gerado")
+                
+                st.markdown("---")
+                st.markdown("### 📄 Parecer Jurídico Gerado")
                 st.markdown(response.text)
                 
-                # Botão para copiar texto
-                st.download_button("Baixar Parecer (TXT)", response.text, file_name="parecer_fiscalizacao.txt")
+                st.download_button("Baixar Parecer", response.text, file_name="parecer_final.txt")
+
             except Exception as e:
-                st.error(f"Erro na IA: {e}")
+                st.error(f"Erro na IA: {str(e)}")
+                st.info("Dica: Verifique se a sua API Key tem permissões para o modelo selecionado.")
