@@ -39,11 +39,11 @@ def criar_word(texto_parecer):
     for linha in texto_parecer.split('\n'):
         if linha.strip():
             p = doc.add_paragraph()
-            if linha.strip().startswith('**') and linha.strip().endswith('**'):
-                run = p.add_run(linha.replace('**', ''))
+            # Mantém a formatação de negritos do Markdown para o Word
+            limpa_linha = linha.replace('**', '').replace('###', '').strip()
+            run = p.add_run(limpa_linha)
+            if '**' in linha:
                 run.bold = True
-            else:
-                p.add_run(linha.replace('**', ''))
     target = BytesIO()
     doc.save(target)
     target.seek(0)
@@ -81,11 +81,10 @@ with c1:
     tipologia_selecionada = ""
     if check_ren:
         tipologia_selecionada = st.selectbox("Selecione a Tipologia REN:", TIPOLOGIAS_REN)
-        
     check_ran = st.checkbox("RAN (DL 73/2009 + DL 199/2015)")
 
 with c2:
-    check_natura = st.checkbox("Rede Natura 2000 (DL 140/99)")
+    check_natura = st.checkbox("Rede Natura 2000 (DL 49/2005)")
     check_patrimonio = st.checkbox("Património (Lei 107/2001)")
 
 with c3:
@@ -96,7 +95,7 @@ if st.button("🚀 Gerar Parecer Jurídico"):
     if not api_key or not uploaded_file:
         st.error("⚠️ Falta a API Key ou o ficheiro PDF.")
     elif check_ren and (tipologia_selecionada == TIPOLOGIAS_REN[0]):
-        st.warning("⚠️ Selecione uma tipologia REN válida no menu suspenso.")
+        st.warning("⚠️ Selecione uma tipologia REN válida.")
     else:
         with st.spinner(f"A analisar com {model_choice}..."):
             try:
@@ -105,24 +104,32 @@ if st.button("🚀 Gerar Parecer Jurídico"):
 
                 diretrizes = []
                 if check_ren: 
-                    diretrizes.append(f"- REN: Aplicar DL 124/2019 e DL 123/2024. Tipologia: '{tipologia_selecionada}'.")
-                    diretrizes.append("  Obrigatório: Fundamentar com as FUNÇÕES do Anexo I e compatibilidade do Anexo II.")
-                if check_ran: diretrizes.append("- RAN: DL 73/2009. Analisar Arts. 21º e 22º.")
-                if check_rjue: diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Nulidade Art. 68º por falta de pareceres.")
-                if check_natura: diretrizes.append("- Rede Natura 2000: DL 140/99. Teste do Art. 9º (Interesse Público e Alternativas).")
-                if check_coimas: diretrizes.append("- Coimas: Lei 50/2006 com redação do DL 87/2024.")
+                    diretrizes.append(f"- REN: DL 166/2008, DL 124/2019 e DL 123/2024. Tipologia: '{tipologia_selecionada}'. Fundamentar com Funções (Anexo I) e Usos (Anexo II).")
+                if check_ran: 
+                    diretrizes.append("- RAN: DL 73/2009. Analisar Arts. 21º e 22º.")
+                if check_natura: 
+                    diretrizes.append("- REDE NATURA 2000: Aplicar obrigatoriamente o DL 49/2005. "
+                                      "Focar no Artigo 9º, nº 2 (Condicionantes de aprovação, ausência de alternativa e interesse público) "
+                                      "e na SECÇÃO III (Regime jurídico de protecção de espécies).")
+                if check_rjue: 
+                    diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Verificar Nulidade do Art. 68º.")
+                if check_coimas: 
+                    diretrizes.append("- Coimas: Lei 50/2006 com redação do DL 87/2024.")
 
                 prompt_final = f"""
-                Age como um Jurista Sénior de uma CCDR (PT-PT).
+                Age como um Jurista Sénior de uma CCDR em Portugal (PT-PT).
                 Analisa o AUTO DE NOTÍCIA com base nestas diretrizes:
                 {chr(10).join(diretrizes)}
 
-                REGRAS ESPECÍFICAS:
-                1. REN: Justificar detalhadamente como a ação viola as FUNÇÕES do ANEXO I para a tipologia específica selecionada.
-                2. LEGALIZAÇÃO: Analisar a viabilidade face ao Art. 102º RJUE, Art. 9º DL 140/99 (Rede Natura) e Art. 20º/21º do RJREN.
-                3. NULIDADES: Aplicar Art. 68º do RJUE (atos nulos por omissão de pareceres obrigatórios).
-                4. ESTILO: Jurídico, formal, capítulos a **BOLD**.
-
+                REGRAS ESPECÍFICAS DE ANÁLISE:
+                1. REDE NATURA 2000: Avaliar se a ação descrita viola o Art. 9º, nº 2 do DL 49/2005. 
+                   - Verificar se existe prejuízo à integridade do sítio.
+                   - Verificar a existência de soluções alternativas.
+                   - Analisar a Secção III quanto à proteção de espécies e habitats.
+                2. REN: Justificar a violação das FUNÇÕES do ANEXO I para a tipologia '{tipologia_selecionada}'.
+                3. LEGALIZAÇÃO: Equacionar se é 'Legalizável' ou 'Insuscetível de Legalização' com base no Art. 102º RJUE e Art. 9º DL 49/2005.
+                4. NULIDADES: Aplicar Art. 68º do RJUE por omissão de pareceres obrigatórios.
+                
                 TEXTO DO AUTO:
                 {texto_auto}
 
@@ -142,7 +149,7 @@ if st.button("🚀 Gerar Parecer Jurídico"):
                 st.subheader("📄 Parecer Jurídico Gerado")
                 st.markdown(parecer_texto)
                 
-                # Botões de Download
+                # Download Options
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
                     st.download_button("Baixar em Markdown (.md)", parecer_texto, file_name="parecer.md")
