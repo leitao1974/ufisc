@@ -7,7 +7,7 @@ from io import BytesIO
 # Configuração da Página
 st.set_page_config(page_title="Fiscalização Digital v2", layout="wide", page_icon="⚖️")
 
-# --- LISTA OFICIAL DE TIPOLOGIAS REN (Art. 4.º) ---
+# --- LISTA OFICIAL DE TIPOLOGIAS REN ---
 TIPOLOGIAS_REN = [
     "--- Selecione uma Tipologia ---",
     "Estrutura de proteção e recarga de aquíferos (Zonas de infiltração máxima)",
@@ -80,6 +80,7 @@ with c1:
     tipologia_selecionada = ""
     if check_ren:
         tipologia_selecionada = st.selectbox("Selecione a Tipologia REN:", TIPOLOGIAS_REN)
+    
     check_ran = st.checkbox("RAN (DL 73/2009 + DL 199/2015)")
 
 with c2:
@@ -96,46 +97,51 @@ if st.button("🚀 Gerar Parecer Jurídico"):
     elif check_ren and (tipologia_selecionada == TIPOLOGIAS_REN[0]):
         st.warning("⚠️ Selecione uma tipologia REN válida.")
     else:
-        with st.spinner(f"A analisar com {model_choice}..."):
+        with st.spinner(f"A analisar regimes com {model_choice}..."):
             try:
                 texto_auto = extrair_texto_pdf(uploaded_file)
                 model = genai.GenerativeModel(model_name=f"models/{model_choice}")
 
                 diretrizes = []
+                
+                # REFORÇO DA ANÁLISE RAN
+                if check_ran:
+                    diretrizes.append(
+                        "- RAN (Reserva Agrícola Nacional): Aplicar DL 73/2009 (redação DL 199/2015).\n"
+                        "  1. Identificar se a utilização é não agrícola (Art. 21.º).\n"
+                        "  2. Transcrever e analisar as alíneas do Art. 21.º ou 22.º aplicáveis.\n"
+                        "  3. Verificar requisitos cumulativos para legalização: inexistência de alternativa fora da RAN e razões de interesse público."
+                    )
+
                 if check_ren: 
-                    diretrizes.append(f"- REN: DL 124/2019 e DL 123/2024. Tipologia: '{tipologia_selecionada}'. Fundamentar com Anexo I (Funções) e Anexo II (Usos).")
+                    diretrizes.append(f"- REN: DL 166/2008 e DL 123/2024. Tipologia: '{tipologia_selecionada}'. Fundamentar com Anexo I e Anexo II.")
                 
                 if check_natura: 
-                    diretrizes.append(
-                        "- REDE NATURA 2000: Aplicar o regime do Art. 9º, nº 2 do DL 49/2005. "
-                        "Verificar se a atividade se enquadra nas alíneas: "
-                        "a) Obras construção civil; b) Alteração uso solo >5ha; c) Modificação coberto vegetal; "
-                        "d) Alteração morfologia solo; e) Zonas húmidas/marinhas; f) Deposição resíduos; "
-                        "g) Vias comunicação; h) Infraestruturas; i) Atividades motorizadas; j) Alpinismo; l) Reintrodução espécies."
-                        "Analisar também a SECÇÃO III sobre Proteção de Espécies."
-                    )
+                    diretrizes.append("- REDE NATURA 2000: DL 49/2005. Analisar Art. 9.º, n.º 2 (alíneas a-l) e Secção III (Espécies).")
                 
-                if check_rjue: diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Nulidade Art. 68º.")
-                if check_coimas: diretrizes.append("- Coimas: Lei 50/2006 com redação do DL 87/2024.")
+                if check_rjue: diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Verificar Nulidade do Art. 68.º.")
+                
+                if check_coimas: diretrizes.append("- Coimas: Lei 50/2006 e DL 87/2024. Identificar gravidade e limites das coimas.")
 
                 prompt_final = f"""
-                Age como um Jurista Sénior (PT-PT). Analisa o AUTO DE NOTÍCIA com as seguintes diretrizes:
+                Age como um Jurista Sénior especialista em Ordenamento em Portugal (PT-PT).
+                Analisa o AUTO DE NOTÍCIA com base nestas diretrizes:
                 {chr(10).join(diretrizes)}
 
-                REGRAS DE ANÁLISE:
-                1. REDE NATURA: Identifica a alínea específica do Art. 9º, nº 2 do DL 49/2005 violada. 
-                   Avalia a viabilidade de legalização sob o teste do interesse público e ausência de alternativas.
-                2. REN: Explica a violação das FUNÇÕES do ANEXO I para a tipologia '{tipologia_selecionada}'.
-                3. LEGALIZAÇÃO: Conclui se é 'Legalizável' ou 'Insuscetível' cruzando RJUE e regimes de servidão.
-                4. NULIDADE: Invoca o Art. 68º do RJUE se houver omissão de pareceres obrigatórios.
+                REGRAS CRÍTICAS:
+                1. RAN: Se selecionada, deves obrigatoriamente verificar se a ação constitui uma utilização não agrícola proibida sem parecer da entidade regional (Art. 21.º). Concluir se é suscetível de regularização excecional.
+                2. REN: Justificar a violação das FUNÇÕES do ANEXO I para a tipologia '{tipologia_selecionada}'.
+                3. REDE NATURA: Citar a alínea específica do Art. 9.º, n.º 2 do DL 49/2005.
+                4. NULIDADES: Invocar o Art. 68.º do RJUE se houver omissão de pareceres da RAN, REN ou ICNF.
+                5. LEGALIZAÇÃO: Analisar de forma taxativa: "Legalizável" ou "Insuscetível de Legalização".
 
                 TEXTO DO AUTO:
                 {texto_auto}
 
-                ESTRUTURA:
+                ESTRUTURA OBRIGATÓRIA:
                 1. **OBJECTIVO**
                 2. **DESCRIÇÃO TÉCNICA E AUDITORIA**
-                3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES**
+                3. **FUNDAMENTAÇÃO JURÍDICA E TRANSGRESSÕES** (Analisar cada regime selecionado separadamente)
                 4. **ANÁLISE JURÍDICA DE VIABILIDADE DE LEGALIZAÇÃO**
                 5. **QUADRO SANCIONATÓRIO E NULIDADES**
                 6. **PARECER FINAL E MEDIDAS DE REPOSIÇÃO**
