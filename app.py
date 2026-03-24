@@ -39,7 +39,6 @@ def criar_word(texto_parecer):
     for linha in texto_parecer.split('\n'):
         if linha.strip():
             p = doc.add_paragraph()
-            # Mantém a formatação de negritos do Markdown para o Word
             limpa_linha = linha.replace('**', '').replace('###', '').strip()
             run = p.add_run(limpa_linha)
             if '**' in linha:
@@ -104,32 +103,32 @@ if st.button("🚀 Gerar Parecer Jurídico"):
 
                 diretrizes = []
                 if check_ren: 
-                    diretrizes.append(f"- REN: DL 166/2008, DL 124/2019 e DL 123/2024. Tipologia: '{tipologia_selecionada}'. Fundamentar com Funções (Anexo I) e Usos (Anexo II).")
-                if check_ran: 
-                    diretrizes.append("- RAN: DL 73/2009. Analisar Arts. 21º e 22º.")
+                    diretrizes.append(f"- REN: DL 124/2019 e DL 123/2024. Tipologia: '{tipologia_selecionada}'. Fundamentar com Anexo I (Funções) e Anexo II (Usos).")
+                
                 if check_natura: 
-                    diretrizes.append("- REDE NATURA 2000: Aplicar obrigatoriamente o DL 49/2005. "
-                                      "Focar no Artigo 9º, nº 2 (Condicionantes de aprovação, ausência de alternativa e interesse público) "
-                                      "e na SECÇÃO III (Regime jurídico de protecção de espécies).")
-                if check_rjue: 
-                    diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Verificar Nulidade do Art. 68º.")
-                if check_coimas: 
-                    diretrizes.append("- Coimas: Lei 50/2006 com redação do DL 87/2024.")
+                    diretrizes.append(
+                        "- REDE NATURA 2000: Aplicar o regime do Art. 9º, nº 2 do DL 49/2005. "
+                        "Verificar se a atividade se enquadra nas alíneas: "
+                        "a) Obras construção civil; b) Alteração uso solo >5ha; c) Modificação coberto vegetal; "
+                        "d) Alteração morfologia solo; e) Zonas húmidas/marinhas; f) Deposição resíduos; "
+                        "g) Vias comunicação; h) Infraestruturas; i) Atividades motorizadas; j) Alpinismo; l) Reintrodução espécies."
+                        "Analisar também a SECÇÃO III sobre Proteção de Espécies."
+                    )
+                
+                if check_rjue: diretrizes.append("- Urbanismo: RJUE e DL 10/2024. Nulidade Art. 68º.")
+                if check_coimas: diretrizes.append("- Coimas: Lei 50/2006 com redação do DL 87/2024.")
 
                 prompt_final = f"""
-                Age como um Jurista Sénior de uma CCDR em Portugal (PT-PT).
-                Analisa o AUTO DE NOTÍCIA com base nestas diretrizes:
+                Age como um Jurista Sénior (PT-PT). Analisa o AUTO DE NOTÍCIA com as seguintes diretrizes:
                 {chr(10).join(diretrizes)}
 
-                REGRAS ESPECÍFICAS DE ANÁLISE:
-                1. REDE NATURA 2000: Avaliar se a ação descrita viola o Art. 9º, nº 2 do DL 49/2005. 
-                   - Verificar se existe prejuízo à integridade do sítio.
-                   - Verificar a existência de soluções alternativas.
-                   - Analisar a Secção III quanto à proteção de espécies e habitats.
-                2. REN: Justificar a violação das FUNÇÕES do ANEXO I para a tipologia '{tipologia_selecionada}'.
-                3. LEGALIZAÇÃO: Equacionar se é 'Legalizável' ou 'Insuscetível de Legalização' com base no Art. 102º RJUE e Art. 9º DL 49/2005.
-                4. NULIDADES: Aplicar Art. 68º do RJUE por omissão de pareceres obrigatórios.
-                
+                REGRAS DE ANÁLISE:
+                1. REDE NATURA: Identifica a alínea específica do Art. 9º, nº 2 do DL 49/2005 violada. 
+                   Avalia a viabilidade de legalização sob o teste do interesse público e ausência de alternativas.
+                2. REN: Explica a violação das FUNÇÕES do ANEXO I para a tipologia '{tipologia_selecionada}'.
+                3. LEGALIZAÇÃO: Conclui se é 'Legalizável' ou 'Insuscetível' cruzando RJUE e regimes de servidão.
+                4. NULIDADE: Invoca o Art. 68º do RJUE se houver omissão de pareceres obrigatórios.
+
                 TEXTO DO AUTO:
                 {texto_auto}
 
@@ -149,7 +148,6 @@ if st.button("🚀 Gerar Parecer Jurídico"):
                 st.subheader("📄 Parecer Jurídico Gerado")
                 st.markdown(parecer_texto)
                 
-                # Download Options
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
                     st.download_button("Baixar em Markdown (.md)", parecer_texto, file_name="parecer.md")
